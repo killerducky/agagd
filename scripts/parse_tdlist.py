@@ -37,6 +37,18 @@ except ValueError:
 
 members = []
 players = []
+ratings = []
+
+def rank_to_rating(rank):
+    """Convert a rank string to a numerical rating."""
+    if rank.endswith("p"):
+        return 7.5
+    elif rank.endswith("d"):
+        return int(rank[:-1]) + 0.5
+    elif rank.endswith("k"):
+        return -int(rank[:-1]) - 0.5
+    else:
+        return -30
 
 #Fields:
 #Name, AGAID, Member Type, Rating, Expiration Date, Chapter Code, State, Sigma, Join Date
@@ -98,6 +110,19 @@ with open(tdlist_fn, encoding="utf-8") as f:
                     "name": given_names,
                     "last_name": family_name,
                     "rating": rating,
+                    "sigma": sigma,
+                },
+            }
+        )
+        ratings.append(
+            {
+                "pk": None,  # Rating ID is not specified, will be auto-generated
+                "model": "agagd_core.rating",
+                "fields": {
+                    "pin_player": member_id,
+                    "elab_date": join_date.strftime("%Y-%m-%d"),
+                    "rating": rating,
+                    "tournament": None,  # No tournament associated with this rating
                     "sigma": sigma,
                 },
             }
@@ -177,11 +202,55 @@ for tournament_fn in tournament_fns:
                 m = re.match(r"(\d+)\s+(.*)\s+(\d+[pdk])", line)
                 if m:
                     pid, name, rank = m.groups()
+                    pid = int(pid)
+                    name = name.strip()
                     t_players[int(pid)] = {
-                        "name": name.strip(),
+                        "name": name,
                         "rank": rank
                     }
                     tournament["fields"]["total_players"] += 1
+                    # If player didn't exist in tdlist, create a new player entry
+                    if not any(player["pk"] == pid for player in players):
+                        players.append(
+                            {
+                                "pk": pid,
+                                "model": "agagd_core.players",
+                                "fields": {
+                                    "elab_date": tournament["fields"]["elab_date"], # TODO: How to handle new players?
+                                    "name": name,
+                                    "last_name": "",
+                                    "rating": rank_to_rating(rank),
+                                    "sigma": 0.5,  # Default for new players
+                                },
+                            }
+                        )
+                        members.append(
+                            {
+                                "pk": int(pid),
+                                "model": "agagd_core.member",
+                                "fields": {
+                                    "member_id": pid,
+                                    "legacy_id": pid,
+                                    "full_name": name,
+                                    "given_names": name.split()[0],
+                                    "family_name": name.split()[-1],
+                                    "join_date": tournament["fields"]["elab_date"],
+                                    "renewal_due": tournament["fields"]["tournament_date"],
+                                    "city": "city",
+                                    "state": "state",
+                                    "status": "accepted",
+                                    "region": "some region",
+                                    "country": "country",
+                                    "chapter": "",
+                                    "chapter_id": 0,
+                                    "occupation": "",
+                                    "citizen": 1,
+                                    "password": "hallo!",
+                                    "type": random.choice(MEMBERSHIP_TYPES),
+                                    "last_changed": tournament["fields"]["elab_date"] + "T00:00:00+00:00",
+                                },
+                            }
+                        )
                 else:
                     print(f"Warning: Could not parse player line: {line}")
                     exit(1)
@@ -189,18 +258,18 @@ for tournament_fn in tournament_fns:
                 # Format: BlackID  WhiteID  Winner  Handicap  Komi
                 #          24545     13194 	  w	       0       6 
                 parts = line.split()
-                if len(parts) == 5:
+                # Skip forfeits / no result
+                if len(parts) == 5 and parts[2] != "?":
                     game_id += 1
-                    #print(json.dumps(t_players, indent=4))
                     g = {
                         "pk": game_id,
                         "model": "agagd_core.game",
                         "fields": {
                             "pin_player_1": int(parts[0]),
                             "pin_player_2": int(parts[1]),
-                            "color_1": "B",
-                            "color_2": "W",
-                            "result": parts[2],
+                            "color_1": "W",
+                            "color_2": "B",
+                            "result": parts[2].upper(),
                             "handicap": int(parts[3]),
                             "elab_date": tournament["fields"]["elab_date"],
                             "tournament_code": tourny_id,
@@ -225,7 +294,7 @@ for tournament_fn in tournament_fns:
 
 print(
     json.dumps(
-        members + players + tournaments + games,
+        members + players + ratings + tournaments + games,
         indent=4,
     )
 )

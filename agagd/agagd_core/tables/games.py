@@ -1,7 +1,7 @@
 import agagd_core.defaults.styles.django_tables2 as django_tables2_styles
 import agagd_core.models as agagd_models
 import django_tables2 as tables
-
+from django.core.exceptions import ObjectDoesNotExist
 
 # Column for the Winner of the Game
 class LinkFullMembersNameColumn(tables.Column):
