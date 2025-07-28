@@ -42,7 +42,8 @@ ratings = []
 def rank_to_rating(rank):
     """Convert a rank string to a numerical rating."""
     if rank.endswith("p"):
-        return 7.5
+        raise ValueError("P ranks should be set to 7d before getting here")
+        #return 7.5
     elif rank.endswith("d"):
         return int(rank[:-1]) + 0.5
     elif rank.endswith("k"):
@@ -198,10 +199,14 @@ for tournament_fn in tournament_fns:
                 else:
                     tournament["fields"]["description"] = line
             elif current_section == "players":
+                if line.startswith("#"): continue  # Skip comments -- should this be done for the other sections too?
                 # Format: ID   Name               Rank
                 m = re.match(r"(\d+)\s+(.*)\s+(\d+[pdk])", line)
                 if m:
                     pid, name, rank = m.groups()
+                    if rank.endswith("p"): 
+                        raise ValueError("\n" + tournament_fn + "\n" + line + "\n" + "P ranks should be set manually")
+                    # if rank.endswith("p"): rank = "7d"
                     pid = int(pid)
                     name = name.strip()
                     t_players[int(pid)] = {
@@ -252,8 +257,7 @@ for tournament_fn in tournament_fns:
                             }
                         )
                 else:
-                    print(f"Warning: Could not parse player line: {line}")
-                    exit(1)
+                    raise ValueError(f"Warning: Could not parse player line: {line}")
             elif current_section == "games":
                 # Format: BlackID  WhiteID  Winner  Handicap  Komi
                 #          24545     13194 	  w	       0       6 

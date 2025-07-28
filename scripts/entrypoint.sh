@@ -33,7 +33,7 @@ fi
 if $LOAD_FIXTURES == "true"; then
     #python make_fake_fixtures.py 1000 1000 1000 > /tmp/fake_agagd_data.json
     #python manage.py loaddata /tmp/fake_agagd_data.json
-    python manage.py loaddata /srv/tournies.json
+    python manage.py loaddata /srv/data/tournies.json
 fi
 
 # Run Collect Static in the Entrypoint because Dockerfile does not always
