@@ -68,12 +68,10 @@ with open(tdlist_fn, encoding="utf-8") as f:
             state = fields[6]
             sigma = float(fields[7])
             join_date = dt.datetime.strptime(fields[8], "%m/%d/%Y").date()
-            given_names = name.split()[0],
-            family_name = name.split()[-1],
+            (family_name, given_names) = re.split(r'\s*,\s*', name)
         except:
             #print(f"Error processing line: {line.strip()}")
             continue
-
 
         members.append(
             {
@@ -83,8 +81,8 @@ with open(tdlist_fn, encoding="utf-8") as f:
                     "member_id": member_id,
                     "legacy_id": member_id,  # Assuming legacy ID is same as member ID
                     "full_name": name,
-                    "given_names": name.split()[0],
-                    "family_name": name.split()[-1],
+                    "given_names": given_names,
+                    "family_name": family_name,
                     "join_date": join_date.strftime("%Y-%m-%d"),
                     "renewal_due": exp_date.strftime("%Y-%m-%d"),
                     "city": "city",
@@ -178,6 +176,8 @@ for tournament_fn in tournament_fns:
             # Section headers
             if line.startswith("TOURN"):
                 current_section = "tournament"
+                if line.startswith("TOURNEY"):
+                    tournament["fields"]["description"] = line[len("TOURNEY"):].strip() # Wow AI said do it this way. Well ok it works!
                 continue
             elif line.startswith("PLAYERS"):
                 current_section = "players"
@@ -208,6 +208,7 @@ for tournament_fn in tournament_fns:
                     # if rank.endswith("p"): rank = "7d"
                     pid = int(pid)
                     name = name.strip()
+                    (family_name, given_names) = re.split(r'\s*,\s*', name)
                     t_players[int(pid)] = {
                         "name": name,
                         "rank": rank
@@ -215,14 +216,15 @@ for tournament_fn in tournament_fns:
                     tournament["fields"]["total_players"] += 1
                     # If player didn't exist in tdlist, create a new player entry
                     if not any(player["pk"] == pid for player in players):
+                        (family_name, given_names) = re.split(r'\s*,\s*', name)
                         players.append(
                             {
                                 "pk": pid,
                                 "model": "agagd_core.players",
                                 "fields": {
                                     "elab_date": tournament["fields"]["elab_date"], # TODO: How to handle new players?
-                                    "name": name,
-                                    "last_name": "",
+                                    "name": given_names,
+                                    "last_name": family_name,
                                     "rating": rank_to_rating(rank),
                                     "sigma": 0.5,  # Default for new players
                                 },
@@ -236,8 +238,8 @@ for tournament_fn in tournament_fns:
                                     "member_id": pid,
                                     "legacy_id": pid,
                                     "full_name": name,
-                                    "given_names": name.split()[0],
-                                    "family_name": name.split()[-1],
+                                    "given_names": given_names,
+                                    "family_name": family_name,
                                     "join_date": tournament["fields"]["elab_date"],
                                     "renewal_due": tournament["fields"]["tournament_date"],
                                     "city": "city",
