@@ -1,0 +1,71 @@
+docker exec -it agagd-db-1 /bin/bash
+# don't need to specify host name when in the machine already
+mysql -h 127.0.0.1 -P 3306 -u agagd -pagagd_insecure_pass agagd
+
+docker exec -it agagd-app-1 /bin/bash
+mysql -h agagd-db-1 -P 3306 -u agagd -pagagd_insecure_pass agagd  # when on agagd-app-1
+
+SHOW DATABASES;
+USE agagd;
+SHOW TABLES;
+SELECT * FROM games LIMIT 10;
+
+
+docker build -t agaratings .
+docker inspect agagd-db-1 | grep -A 5 Networks
+docker run -it --network agagd_default agaratings /bin/bash
+docker run -it --network agagd_default agaratings "bayrate --commit"
+
+
+python make_fake_fixtures.py 1000 1000 1000 > /tmp/fake_agagd_data.json
+docker exec -it agagd-app-1 /bin/bash
+python manage.py flush --no-input    # seems not working?
+python manage.py loaddata /tmp/fake_agagd_data.json
+python manage.py loaddata /srv/tournies.json
+
+docker cp presults.pl agagd-app-1:/srv/
+ 2077  sudo apt-get install libdbi-perl
+ 2080  sudo apt-get install -y libdbd-mysql-perl
+
+DEV LOOP:
+agagd:
+  fix/change bug in e.g. parse_tdlist.py
+  python3 parse_tdlist.py data/tdlists/GenerateTDListA\ 2025-07-10.txt data/tournies/*.txt > data/tournies.json
+  [ctrl-c the docker if it is running]
+  docker-compose down
+  docker volume rm agagd_database
+  docker-compose up --build --force-recreate
+AGA-Ratings-Program:
+  docker run -it --network agagd_default agaratings "bayrate --commit"
+
+AGA: 
+Jin, Weibin    8.01283
+Cho, Daehee    6.90147
+Morris, Trevor 5.04728
+Ray, Shawn     3.66686
+
+ME setting Webin to 7d
+Jin, Weibin [7.98982]
+Cho, Daehee [6.90209]
+Morris, Trevor [5.05001]
+Ray, Shawn [3.66055]
+
+
+ME Set 7p to 1p (aka 1d!) in both Open and Seniors:
+Cho, Daehee [6.5554]
+Jin, Weibin [6.31022]
+
+
+Why does Trevor not show a prior rating?
+  2829    5.45933  0.580211  ::           0         0                                       6
+
+docker exec -it agagd-app-1 /bin/bash
+mysql -h agagd-db-1 -P 3306 -u agagd -pagagd_insecure_pass agagd
+SELECT * FROM players WHERE Pin_Player = 2829;
+SELECT CONCAT(players.name, ' ', players.last_name) AS name, x.pin_player, x.rating, x.sigma, x.elab_date FROM ratings x, players, (SELECT MAX(elab_date) AS maxdate, pin_player FROM ratings WHERE elab_date < '2025-06-19' GROUP BY pin_player) AS maxresults WHERE x.pin_player = maxresults.pin_player AND x.elab_date = maxresults.maxdate AND x.pin_player = players.pin_player AND x.pin_player != 0 and x.pin_player=2829;
+
+
+
+Seniors Round 3, looks like the colors are backwards for Board 8. The 2d is black taking H2 from the 1k.
+
+

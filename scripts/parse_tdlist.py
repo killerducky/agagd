@@ -141,6 +141,7 @@ with open(tdlist_fn, encoding="utf-8") as f:
 # 31678   Cho, Daehee                6d 
 #
 # GAMES 1 
+# WHITE   BLACK   WINNER  HANDICAP KOMI
 # 24545   13194 	 w	 0	 6 
 # 15343   4146  	 b	 0	 6 
 # END
@@ -175,7 +176,7 @@ for tournament_fn in tournament_fns:
             if line == "": continue
 
             # Section headers
-            if line.startswith("TOURNAMENT"):
+            if line.startswith("TOURN"):
                 current_section = "tournament"
                 continue
             elif line.startswith("PLAYERS"):
@@ -188,11 +189,9 @@ for tournament_fn in tournament_fns:
             elif line.startswith("END"):
                 current_section = None
                 break
-
             if current_section == "tournament":
                 if "=" in line:
                     key, val = line.split("=", 1)
-                    "%Y-%m-%d"
                     if key == "start":
                         tournament["fields"]["elab_date"] = dt.datetime.strptime(val.strip(), "%m/%d/%Y").strftime("%Y-%m-%d")
                         tournament["fields"]["tournament_date"] = dt.datetime.strptime(val.strip(), "%m/%d/%Y").strftime("%Y-%m-%d")
@@ -251,7 +250,7 @@ for tournament_fn in tournament_fns:
                                     "occupation": "",
                                     "citizen": 1,
                                     "password": "hallo!",
-                                    "type": random.choice(MEMBERSHIP_TYPES),
+                                    "type": "Full",
                                     "last_changed": tournament["fields"]["elab_date"] + "T00:00:00+00:00",
                                 },
                             }
